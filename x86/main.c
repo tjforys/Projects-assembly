@@ -1,98 +1,71 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
-#pragma pack(push, 1)
-typedef struct {
-    unsigned short bfType;
-    unsigned int bfSize;
-    unsigned short bfReserved1;
-    unsigned short bfReserved2;
-    unsigned int bfOffBits;
-    unsigned int biSize;
-    int biWidth;
-    int biHeight;
-    unsigned short biPlanes;
-    unsigned short biBitCount;
-    unsigned int biCompression;
-    unsigned int biSizeImage;
-    int biXPelsPerMeter;
-    int biYPelsPerMeter;
-    unsigned int biClrUsed;
-    unsigned int biClrImportant;
-} BITMAPFILEHEADER;
-#pragma pack(pop)
-
-extern void enhance_contrast(void *img, int width, int height);
-
-void read_bmp(const char *filename, unsigned char **img_data, int *width, int *height) {
+extern void enhance_contrast(uint8_t *img);
+// extern int essa;
+uint8_t* load_bmp(const char *filename, int *size) {
     FILE *f = fopen(filename, "rb");
     if (!f) {
-        perror("Failed to open file");
-        exit(1);
+        perror("Error opening file");
+        return NULL;
     }
 
-    BITMAPFILEHEADER header;
-    fread(&header, sizeof(BITMAPFILEHEADER), 1, f);
+    // Move the file pointer to the end of the file
+    fseek(f, 0, SEEK_END);
+    // Get the size of the file
+    *size = ftell(f);
+    // Move the file pointer back to the beginning of the file
+    fseek(f, 0, SEEK_SET);
 
-    if (header.bfType != 0x4D42 || header.biBitCount != 24) {
-        fprintf(stderr, "Not a 24 bpp BMP file\n");
+    // Allocate memory to hold the entire file
+    uint8_t *data = (uint8_t*)malloc(*size);
+    if (data == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
         fclose(f);
-        exit(1);
+        return NULL;
     }
 
-    *width = header.biWidth;
-    *height = header.biHeight;
-    int size = header.biSizeImage ? header.biSizeImage : (*width * 3 * *height);
-
-    *img_data = (unsigned char *)malloc(size);
-    if (!*img_data) {
-        perror("Failed to allocate memory");
-        fclose(f);
-        exit(1);
-    }
-
-    fseek(f, header.bfOffBits, SEEK_SET);
-    fread(*img_data, 1, size, f);
+    // Read the entire file into memory
+    fread(data, 1, *size, f);
     fclose(f);
+
+    return data;
 }
 
-void save_bmp(const char *filename, unsigned char *img_data, int width, int height) {
+void write_bmp(const char *filename, uint8_t *data, int size) {
     FILE *f = fopen(filename, "wb");
     if (!f) {
-        perror("Failed to open file");
-        exit(1);
+        perror("Error opening file for writing");
+        return;
     }
 
-    BITMAPFILEHEADER header = {0};
-    header.bfType = 0x4D42;
-    header.bfSize = sizeof(BITMAPFILEHEADER) + width * height * 3;
-    header.bfOffBits = sizeof(BITMAPFILEHEADER);
-    header.biSize = sizeof(BITMAPFILEHEADER) - 14;
-    header.biWidth = width;
-    header.biHeight = height;
-    header.biPlanes = 1;
-    header.biBitCount = 24;
-    header.biCompression = 0;
-    header.biSizeImage = width * height * 3;
-
-    fwrite(&header, sizeof(BITMAPFILEHEADER), 1, f);
-    fwrite(img_data, 1, width * height * 3, f);
+    fwrite(data, 1, size, f);
     fclose(f);
 }
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s <input_bmp> <output_bmp>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <input.bmp> <output.bmp>\n", argv[0]);
         return 1;
     }
 
-    unsigned char *img_data;
-    int width, height;
+    int size;
+    uint8_t *img = load_bmp(argv[1], &size);
+    if (img == NULL) {
+        return 1;
+    }
 
-    read_bmp(argv[1], &img_data, &width, &height);
-    enhance_contrast(img_data, width, height);
-    save_bmp(argv[2], img_data, width, height);
+    printf("Loaded BMP file with size: %d bytes\n", size);
 
-    free(img_data);
+
+    enhance_contrast(img);
+    // printf("%d", essa);
+    write_bmp(argv[2], img, size);
+    printf("Wrote the modified image to '%s'\n", argv[2]);
+
+    // Free the allocated memory
+    free(img);
+
     return 0;
 }
