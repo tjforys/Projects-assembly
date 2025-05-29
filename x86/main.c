@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 extern void enhance_contrast(uint8_t *img);
-// extern int essa;
+extern int essa;
 uint8_t* load_bmp(const char *filename, int *size) {
     FILE *f = fopen(filename, "rb");
     if (!f) {
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
 
     enhance_contrast(img);
-    // printf("%d", essa);
+    printf("%d", essa);
     write_bmp(argv[2], img, size);
     printf("Wrote the modified image to '%s'\n", argv[2]);
 

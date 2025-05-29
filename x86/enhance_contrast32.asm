@@ -1,7 +1,10 @@
 BITS 32
+SECTION .data
+essa: dd 1
 SECTION .text
-global enhance_contrast
 
+global enhance_contrast
+global essa
 enhance_contrast:
     ;prolog
     push ebp
@@ -88,6 +91,8 @@ calculate_contrast:
     sub bh, bl
     movzx ecx, bh  
     div ecx
+ 
+    mov [essa], cl
 
     mov edx, eax
     mov edi, [ebp-4]
